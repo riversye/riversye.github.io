@@ -1,121 +1,195 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE>
+<html>
 <head>
-	<meta charset="UTF-8">
-	<title>Document</title>
-	<style>body{background-color:black;}</style>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+    <title>猜猜看</title>
 </head>
-<body>
-	<canvas id="canvas"></canvas>
-	<script >
-	function tick() {
-        ctx.clearRect(0, 0, cw, ch),
-        ctx.drawImage(bufferCanvas, 0, 0, current, txtH, sx, sy, current, txtH),
-        ctx.save(),
-        ctx.globalAlpha = .05,
-        ctx.globalCompositeOperation = "lighter",
-        drawRays(current) ? (current++, current = Math.min(current, txtW), window.requestAnimationFrame(tick)) : fadeOut(),
-        ctx.restore()
-}
-function fadeOut() {
-    ctx.clearRect(0, 0, cw, ch),
-        ctx.globalAlpha *= .95,
-        ctx.drawImage(bufferCanvas, 0, 0, current, txtH, sx, sy, current, txtH),
-        ctx.globalAlpha > .01 ? window.requestAnimationFrame(fadeOut) : window.setTimeout(restart, 500)
-}
-function restart() {
-    for (var t = 0; t < rays.length; t++) rays[t].reset();
-    ctx.globalAlpha = 1,
-        buffer.clearRect(0, 0, txtW, txtH),
-        current = 0,
-        tick()
-}
-function drawRays(t) {
-    var a = 0;
-    ctx.beginPath();
-    for (var r = 0; r < rays.length; r++) {
-        var e = rays[r];
-        e.col < t && (a += e.draw())
-    }
-    return ctx.stroke(), a !== rays.length
-}
-function Ray(t, a, r) {
-    this.col = a,
-        this.row = t;
-    var e = sx + a,
-        i = sy + t,
-        n = r,
-        x = txtH / 1.5,
-        o = pi2 * (this.row - .5 * x) / x;
-    0 === o && (o = (Math.random() - .5) * pi2);
-    var c = .02 * Math.sign(o),
-        s = 2 * pi * (this.col - .5 * txtW) / txtW;
-    0 === s && (s = (Math.random() - .5) * pi);
-    var l = .02 * Math.sign(s);
-    c += .005 * (Math.random() - .5);
-    var h = 0,
-        d = 2 * Math.random() + 2,
-        f = !1;
-    this.reset = function () {
-        s = 2 * pi * (this.col - .5 * txtW) / txtW,
-            o = pi2 * (this.row - .5 * x) / x,
-        0 === o && (o = .5 * -pi2),
-            h = 0,
-            f = !1
+
+<body style="background-color: rgb(0, 0, 0);">
+
+
+<script type="text/javascript">
+    BLUR = false;
+    PULSATION = true;
+    PULSATION_PERIOD = 600;
+    PARTICLE_RADIUS = 4;
+    /* disable blur before using blink */
+    BLINK = false;
+    GLOBAL_PULSATION = false;
+    QUALITY = 2;
+    /* 0 - 5 */
+    /* set false if you prefer rectangles */
+    ARC = true;
+    /* trembling + blur = fun */
+    TREMBLING = 0;
+    /* 0 - infinity */
+    FANCY_FONT = "Arial";
+    BACKGROUND = "#000";
+    BLENDING = true;
+    /* if empty the text will be a random number */
+    var TEXT;
+    num = 0;
+    TEXTArray = ["小", "金", "鱼", "我", "喜", "欢", "你"];
+    QUALITY_TO_FONT_SIZE = [10, 12, 40, 50, 100, 350];
+    QUALITY_TO_SCALE = [20, 6, 4, 2, 0.9, 0.5];
+    QUALITY_TO_TEXT_POS = [10, 20, 60, 100, 370, 280];
+    window.onload = function () {
+        document.body.style.backgroundColor = BACKGROUND;
+        var canvas = document.getElementById("canvas");
+        var ctx = canvas.getContext("2d");
+        var W = canvas.width;
+        var H = canvas.height;
+        var tcanvas = document.createElement("canvas");
+        var tctx = tcanvas.getContext("2d");
+        tcanvas.width = W;
+        tcanvas.height = H;
+        total_area = W * H;
+        total_particles = 928;
+        single_particle_area = total_area / total_particles;
+        area_length = Math.sqrt(single_particle_area);
+        var particles = [];
+        for (var i = 1; i <= total_particles; i++) {
+            particles.push(new particle(i));
+        }
+        function particle(i) {
+            this.r = Math.round(Math.random() * 255 | 0);
+            this.g = Math.round(Math.random() * 255 | 0);
+            this.b = Math.round(Math.random() * 255 | 0);
+            this.alpha = 1;
+            this.x = (i * area_length) % W;
+            this.y = (i * area_length) / W * area_length;
+            /* randomize delta to make particles sparkling */
+            this.deltaOffset = Math.random() * PULSATION_PERIOD | 0;
+            this.radius = 0.1 + Math.random() * 2;
+        }
+        var positions = [];
+        function new_positions() {
+            TEXT = TEXTArray[num];
+            if (num < TEXTArray.length - 1) {
+                num++;
+            } else {
+                num = 0;
+            }
+            //alert(TEXT);
+            tctx.fillStyle = "white";
+            tctx.fillRect(0, 0, W, H)
+            //tctx.fill();
+            tctx.font = "bold " + QUALITY_TO_FONT_SIZE[QUALITY] + "px " + FANCY_FONT;
+            //tctx.textAlign='center';//文本水平对齐方式
+            //tctx.textBaseline='middle';
+            //tctx.strokeStyle = "black";
+            tctx.fillStyle = "#f00";
+            //tctx.strokeText(TEXT,30, 50);
+            tctx.fillText(TEXT, 20, 60);
+            image_data = tctx.getImageData(0, 0, W, H);
+            pixels = image_data.data;
+            positions = [];
+            for (var i = 0; i < pixels.length; i = i + 2) {
+                if (pixels[i] != 255) {
+                    position = {
+                        x: (i / 2 % W | 0) * QUALITY_TO_SCALE[QUALITY] | 0,
+                        y: (i / 2 / W | 0) * QUALITY_TO_SCALE[QUALITY] | 0
+                    }
+                    positions.push(position);
+                }
+            }
+            get_destinations();
+        }
+        function draw() {
+            var now = Date.now();
+            ctx.globalCompositeOperation = "source-over";
+            if (BLUR) ctx.globalAlpha = 0.1;
+            else if (!BLUR && !BLINK) ctx.globalAlpha = 1.0;
+            ctx.fillStyle = BACKGROUND;
+            ctx.fillRect(0, 0, W, H)
+            if (BLENDING) ctx.globalCompositeOperation = "lighter";
+            for (var i = 0; i < particles.length; i++) {
+                p = particles[i];
+                /* in lower qualities there is not enough full pixels for all of  them - dirty hack*/
+                if (isNaN(p.x)) continue
+                ctx.beginPath();
+                ctx.fillStyle = "rgb(" + p.r + ", " + p.g + ", " + p.b + ")";
+                ctx.fillStyle = "rgba(" + p.r + ", " + p.g + ", " + p.b + ", " + p.alpha + ")";
+                if (BLINK) ctx.globalAlpha = Math.sin(Math.PI * mod * 1.0);
+                if (PULSATION) { /* this would be 0 -> 1 */
+                    var mod = ((GLOBAL_PULSATION ? 0 : p.deltaOffset) + now) % PULSATION_PERIOD / PULSATION_PERIOD;
+                    /* lets make the value bouncing with sinus */
+                    mod = Math.sin(mod * Math.PI);
+                } else var mod = 1;
+                var offset = TREMBLING ? TREMBLING * (-1 + Math.random() * 2) : 0;
+                var radius = PARTICLE_RADIUS * p.radius;
+                if (!ARC) {
+                    ctx.fillRect(offset + p.x - mod * radius / 2 | 0, offset + p.y - mod * radius / 2 | 0, radius * mod,
+                            radius * mod);
+                } else {
+                    ctx.arc(offset + p.x | 0, offset + p.y | 0, radius * mod, Math.PI * 2, false);
+                    ctx.fill();
+                }
+                p.x += (p.dx - p.x) / 10;
+                p.y += (p.dy - p.y) / 10;
+            }
+        }
+        function get_destinations() {
+            for (var i = 0; i < particles.length; i++) {
+                pa = particles[i];
+                particles[i].alpha = 1;
+                var distance = [];
+                nearest_position = 0;
+                if (positions.length) {
+                    for (var n = 0; n < positions.length; n++) {
+                        po = positions[n];
+                        distance[n] = Math.sqrt((pa.x - po.x) * (pa.x - po.x) + (pa.y - po.y) * (pa.y - po.y));
+                        if (n > 0) {
+                            if (distance[n] <= distance[nearest_position]) {
+                                nearest_position = n;
+                            }
+                        }
+                    }
+                    particles[i].dx = positions[nearest_position].x;
+                    particles[i].dy = positions[nearest_position].y;
+                    particles[i].distance = distance[nearest_position];
+                    var po1 = positions[nearest_position];
+                    for (var n = 0; n < positions.length; n++) {
+                        var po2 = positions[n];
+                        distance = Math.sqrt((po1.x - po2.x) * (po1.x - po2.x) + (po1.y - po2.y) * (po1.y - po2.y));
+                        if (distance <= 5) {
+                            positions.splice(n, 1);
+                        }
+                    }
+                } else {
+                    //particles[i].alpha =   0;
+                }
+            }
+        }
+        function init() {
+            new_positions();
+            setInterval(draw, 30);
+            setInterval(new_positions, 2000);
+        }
+        init();
     };
-    this.draw = function () {
-        return 0 > h ? (f || (buffer.fillStyle = n, buffer.fillRect(this.col, this.row, 1, 1), f = !0), 1) : (ctx.moveTo(e, i), ctx.quadraticCurveTo(e + Math.cos(s) * h * .5, i + Math.sin(s) * h * .5, e + Math.cos(o) * h, i + Math.sin(o) * h), o += c, s += l, h += Math.cos(o) * d, 0)
+</script>
+
+<style type="text/css">
+    body {
+        background: #000;
+        text-align: center;
+        font-family: "simhei"
     }
-}
-var txt = "小金鱼,我喜欢你",
-    txtH = 50,
-    font = "sans-serif",
-    bg = "#000",
-    rayColor1 = "#f50057",
-    rayColor2 = "#e040fb",
-    rayColor3 = "#ffff00",
-    canvas = document.getElementById("canvas"),
-    ctx = canvas.getContext("2d"),
-    cw = canvas.width = window.innerWidth,
-    ch = canvas.height = window.innerHeight*0.5,
-    w2 = cw / 2,
-    h2 = ch / 2,
-    pi = Math.PI,
-    pi2 = .5 * pi,
-    txtCanvas = document.createElement("canvas"),
-    txtCtx = txtCanvas.getContext("2d");
-    txtCtx.font = txtH + "px " + font,
-    txtCtx.textBaseline = "middle";
-var txtW = Math.floor(txtCtx.measureText(txt).width);
-    txtCanvas.width = txtW,
-    txtCanvas.height = 1.2 * txtH;
-var gradient = ctx.createRadialGradient(w2, h2, 0, w2, h2, txtW);
-    gradient.addColorStop(0, rayColor3),
-    gradient.addColorStop(.5, rayColor2),
-    gradient.addColorStop(1, rayColor1),
-    ctx.strokeStyle = gradient,
-    txtCtx.fillStyle = gradient,
-    txtCtx.font = txtH + "px " + font,
-    txtCtx.textBaseline = "middle",
-    txtCtx.fillText(txt, 0, .5 * txtH)
-    txtH *= 1.5;
-var bufferCanvas = document.createElement("canvas");
-    bufferCanvas.width = txtW,
-    bufferCanvas.height = txtH;
-for (var buffer = bufferCanvas.getContext("2d"), sx = .5 * (cw - txtW), sy = .5 * (ch - txtH), rays = [], txtData = txtCtx.getImageData(0, 0, txtW, txtH), i = 0; i < txtData.data.length; i += 4) {
-    var ii = i / 4,
-        row = Math.floor(ii / txtW),
-        col = ii % txtW,
-        alpha = txtData.data[i + 3];
-    if (0 !== alpha) {
-        var c = "rgba(";
-            c += [txtData.data[i], txtData.data[i + 1], txtData.data[i + 2], alpha / 255],
-            c += ")",
-            rays.push(new Ray(Math.floor(ii / txtW), ii % txtW, c))
+    canvas {
+        margin: auto;
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 0;
+        bottom: 0;
     }
-}
-var current = 0;
-tick();
-	</script>
+</style>
+
+
+<canvas id="canvas" width="1000" height="800"></canvas>
+
+
 </body>
 </html>
